@@ -36,6 +36,10 @@ PRINT_OK = $(SILENT) || printf " $(OK_STRING)" | $(AWK_STATUS)
 BUILD_CMD = LOG=$$($(CMD) 2>&1) ; if [ $$? -gt 0 ]; then $(PRINT_ERROR); elif [ "$$LOG" != "" ] ; then $(PRINT_WARNING); else $(PRINT_OK); fi;
 MAKE_MSG_FORMAT = $(AWK) '{ printf "%-118s", $$0;}'
 
+# WILD: make things not awful with parallel make (remove the trailing '[OK]' and extra spaces)
+AWK_CMD = $(AWK) '{ printf "%s\n", $$0; }'
+PRINT_OK = :
+
 # The UNSYNC_OUTPUT_CMD command disables the `--output-sync` for the current command, if the `--output-sync` granularity is `target` or lower.
 # This is achieved by telling make to treat the current command as if it invokes a recursive make subcommand (as if by calling `$(MAKE)`).
 UNSYNC_OUTPUT_CMD = +true
