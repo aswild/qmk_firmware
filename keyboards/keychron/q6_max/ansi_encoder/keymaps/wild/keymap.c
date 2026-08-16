@@ -133,6 +133,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             // shift: RGB brightness (value)
             // ctrl: RGB hue
             // alt: RGB saturation
+            // alt+shift: RGB speed
             case W_ENCDN:
             {
                 switch (get_mods_flat())
@@ -148,6 +149,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         break;
                     case M_ALT:
                         rgb_matrix_decrease_sat();
+                        break;
+                    case M_ALT | M_SHIFT:
+                        rgb_matrix_decrease_speed();
                         break;
                 }
                 return false;
@@ -168,6 +172,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         break;
                     case M_ALT:
                         rgb_matrix_increase_sat();
+                        break;
+                    case M_ALT | M_SHIFT:
+                        rgb_matrix_increase_speed();
                         break;
                 }
                 return false;
