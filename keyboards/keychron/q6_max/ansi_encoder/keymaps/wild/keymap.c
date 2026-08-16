@@ -15,6 +15,8 @@
  */
 
 #include QMK_KEYBOARD_H
+#include "bootloader.h"
+#include "bootmagic.h"
 #include "keychron_common.h"
 
 enum layers {
@@ -24,9 +26,156 @@ enum layers {
     WIN_FN,
 };
 
+enum wild_keycodes {
+    W_RGBCTL = SAFE_RANGE,
+    W_ENCFN,
+    W_ENCDN,
+    W_ENCUP,
+};
+
 #define FN_MAC MO(MAC_FN)
 #define FN_WIN MO(WIN_FN)
 
+// Modifier flattening - get a version of the current modifiers, ignoring left/right variations.
+// This lets you do (mods == M_CTRL) to see if *only* left and/or right control modifier is set,
+// but not shift or something else.
+#define M_CTRL  (1 << 0)
+#define M_ALT   (1 << 1)
+#define M_SHIFT (1 << 2)
+#define M_WIN   (1 << 3)
+
+static uint8_t get_mods_flat(void) {
+    uint8_t mods = get_mods();
+    unsigned int m = 0;
+    if (mods & MOD_MASK_CTRL) {
+        m |= M_CTRL;
+    }
+    if (mods & MOD_MASK_ALT) {
+        m |= M_ALT;
+    }
+    if (mods & MOD_MASK_SHIFT) {
+        m |= M_SHIFT;
+    }
+    if (mods & MOD_MASK_GUI) {
+        m |= M_WIN;
+    }
+    return m;
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) {
+        switch (keycode)
+        {
+            case W_ENCFN:
+            {
+                uint8_t mods = get_mods();
+                if (mods == MOD_BIT(KC_LALT)) {
+                    // Fn+LAlt+Knob -> jump to bootloader.
+                    // Go red (low-level, bypass RGB task)
+                    rgb_matrix_driver.set_color_all(255, 0, 0);
+                    rgb_matrix_driver.flush();
+
+                    // un-press alt and wait for the update to propagate. Idk how to
+                    // definitely wait for "the host polled our key state again" so just sleep some.
+                    unregister_code(KC_LALT);
+                    chThdSleepMilliseconds(500);
+                    // clear eeprom (bootmagic does this)
+                    eeconfig_disable();
+                    // Jump to bootloader. This calls NVIC_SystemReset and never returns.
+                    bootloader_jump();
+                }
+                return false;
+            }
+
+            // RGB Control button.
+            //
+            // No modifiers: toggle on/off
+            // Ctrl: next mode
+            // Shift or Ctrl+Shift: prev mode
+            // Alt: Pleasing Rainbow Mode 1
+            // Ctrl+Alt: Pleasing Rainbow Mode 2
+            // Alt+Shift: solid color
+            // Ctrl+Alt+Shift: solid color and default
+            case W_RGBCTL:
+            {
+                switch (get_mods_flat())
+                {
+                    case 0:
+                        rgb_matrix_toggle();
+                        break;
+                    case M_CTRL:
+                        rgb_matrix_step();
+                        break;
+                    case M_SHIFT:
+                    case M_CTRL | M_SHIFT:
+                        rgb_matrix_step_reverse();
+                        break;
+                    case M_ALT:
+                        rgb_matrix_mode_noeeprom(RGB_MATRIX_RAINBOW_BEACON);
+                        rgb_matrix_set_speed(10);
+                        break;
+                    case M_CTRL | M_ALT:
+                        rgb_matrix_mode_noeeprom(RGB_MATRIX_JELLYBEAN_RAINDROPS);
+                        rgb_matrix_set_speed(10);
+                        break;
+                    case M_ALT | M_SHIFT:
+                        rgb_matrix_mode(RGB_MATRIX_SOLID_COLOR);
+                        break;
+                    case M_CTRL | M_ALT | M_SHIFT:
+                        eeconfig_update_rgb_matrix_default();
+                        break;
+                }
+                return false;
+            }
+
+            // Encoder knob (layer 2, without fn key)
+            // No modifiers: volume
+            // shift: RGB brightness (value)
+            // ctrl: RGB hue
+            // alt: RGB saturation
+            case W_ENCDN:
+            {
+                switch (get_mods_flat())
+                {
+                    case 0:
+                        SEND_STRING(SS_TAP(X_VOLD));
+                        break;
+                    case M_SHIFT:
+                        rgb_matrix_decrease_val();
+                        break;
+                    case M_CTRL:
+                        rgb_matrix_decrease_hue();
+                        break;
+                    case M_ALT:
+                        rgb_matrix_decrease_sat();
+                        break;
+                }
+                return false;
+            }
+
+            case W_ENCUP:
+            {
+                switch (get_mods_flat())
+                {
+                    case 0:
+                        SEND_STRING(SS_TAP(X_VOLU));
+                        break;
+                    case M_SHIFT:
+                        rgb_matrix_increase_val();
+                        break;
+                    case M_CTRL:
+                        rgb_matrix_increase_hue();
+                        break;
+                    case M_ALT:
+                        rgb_matrix_increase_sat();
+                        break;
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+}
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -47,7 +196,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,  _______,  _______,                                _______,                                _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______),
 
     [WIN_BASE] = LAYOUT_109_ansi(
-        KC_ESC,   KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,   KC_F12,   LSG(KC_Z),KC_PSCR,  G(KC_L),  UG_NEXT,  KC_MPLY,  KC_MAIL,  KC_CALC,  _______,
+        KC_ESC,   KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,   KC_F12,   LSG(KC_Z),KC_PSCR,  G(KC_L),  W_RGBCTL, KC_MPLY,  KC_MAIL,  KC_CALC,  _______,
         KC_GRV,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,  KC_EQL,   KC_BSPC,  KC_INS,   KC_HOME,  KC_PGUP,  KC_NUM,   KC_PSLS,  KC_PAST,  KC_PMNS,
         KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,  KC_RBRC,  KC_BSLS,  KC_DEL,   KC_END,   KC_PGDN,  KC_P7,    KC_P8,    KC_P9,
         KC_LCTL,  KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,            KC_ENT,                                 KC_P4,    KC_P5,    KC_P6,    KC_PPLS,
@@ -55,7 +204,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LCTL,  KC_LWIN,  KC_LALT,                                KC_SPC,                                 KC_RALT,  KC_RWIN,  FN_WIN,   KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT,  KC_P0,              KC_PDOT,  KC_PENT),
 
     [WIN_FN] = LAYOUT_109_ansi(
-        _______,  KC_BRID,  KC_BRIU,  KC_TASK,  KC_FILE,  UG_VALD,  UG_VALU,  KC_MPRV,  KC_MPLY,  KC_MNXT,  KC_MUTE,  KC_VOLD,  KC_VOLU,  UG_TOGG,  _______,  KC_SLEP,  UG_TOGG,  _______,  _______,  _______,  _______,
+        _______,  KC_BRID,  KC_BRIU,  KC_TASK,  KC_FILE,  UG_VALD,  UG_VALU,  KC_MPRV,  KC_MPLY,  KC_MNXT,  KC_MUTE,  KC_VOLD,  KC_VOLU,  W_ENCFN,  _______,  KC_SLEP,  _______,  _______,  _______,  _______,  _______,
         _______,  BT_HST1,  BT_HST2,  BT_HST3,  P2P4G,    _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
         UG_TOGG,  UG_NEXT,  UG_VALU,  UG_HUEU,  UG_SATU,  UG_SPDU,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
         KC_CAPS,  UG_PREV,  UG_VALD,  UG_HUED,  UG_SATD,  UG_SPDD,  _______,  _______,  _______,  _______,  _______,  _______,            _______,                                _______,  _______,  _______,  _______,
@@ -68,7 +217,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
     [MAC_BASE] = {ENCODER_CCW_CW(KC_VOLD, KC_VOLU)},
     [MAC_FN]   = {ENCODER_CCW_CW(UG_VALD, UG_VALU)},
-    [WIN_BASE] = {ENCODER_CCW_CW(KC_VOLD, KC_VOLU)},
+    [WIN_BASE] = {ENCODER_CCW_CW(W_ENCDN, W_ENCUP)},
     [WIN_FN]   = {ENCODER_CCW_CW(UG_VALD, UG_VALU)},
 };
 #endif // ENCODER_MAP_ENABLE
