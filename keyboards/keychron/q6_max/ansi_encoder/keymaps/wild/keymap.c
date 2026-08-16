@@ -111,11 +111,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         rgb_matrix_step_reverse();
                         break;
                     case M_ALT:
-                        rgb_matrix_mode_noeeprom(RGB_MATRIX_RAINBOW_BEACON);
+                        rgb_matrix_mode(RGB_MATRIX_RAINBOW_BEACON);
                         rgb_matrix_set_speed(10);
                         break;
                     case M_CTRL | M_ALT:
-                        rgb_matrix_mode_noeeprom(RGB_MATRIX_JELLYBEAN_RAINDROPS);
+                        rgb_matrix_mode(RGB_MATRIX_JELLYBEAN_RAINDROPS);
                         rgb_matrix_set_speed(10);
                         break;
                     case M_ALT | M_SHIFT:
