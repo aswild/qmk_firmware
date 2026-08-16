@@ -33,6 +33,18 @@
 
 #if defined(KEYCHRON_RGB_ENABLE) && defined(EECONFIG_SIZE_CUSTOM_RGB)
 
+#ifndef RGB_INDICATOR_DEFAULT_HUE
+#define RGB_INDICATOR_DEFAULT_HUE 255
+#endif
+
+#ifndef RGB_INDICATOR_DEFAULT_SAT
+#define RGB_INDICATOR_DEFAULT_SAT 0
+#endif
+
+#ifndef RGB_INDICATOR_DEFAULT_VAL
+#define RGB_INDICATOR_DEFAULT_VAL 255
+#endif
+
 #    define PER_KEY_RGB_VER 0x0001
 
 #    define OFFSET_OS_INDICATOR ((uint8_t *)(EECONFIG_BASE_CUSTOM_RGB))
@@ -76,8 +88,9 @@ extern void update_mixed_rgb_effect_count(void);
 
 void eeconfig_reset_custom_rgb(void) {
     os_ind_cfg.disable.raw = 0;
-    os_ind_cfg.hsv.s       = 0;
-    os_ind_cfg.hsv.h = os_ind_cfg.hsv.v = 0xFF;
+    os_ind_cfg.hsv.h       = RGB_INDICATOR_DEFAULT_HUE;
+    os_ind_cfg.hsv.s       = RGB_INDICATOR_DEFAULT_SAT;
+    os_ind_cfg.hsv.v       = RGB_INDICATOR_DEFAULT_VAL;
 
     eeprom_update_block(&os_ind_cfg, OFFSET_OS_INDICATOR, sizeof(os_ind_cfg));
     retail_demo_enable = 0;
