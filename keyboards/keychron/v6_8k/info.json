@@ -14,6 +14,8 @@
         "mousekey": true,
         "nkro": true,
         "dip_switch": true,
+        "encoder": true,
+        "encoder_map": true,
         "rgb_matrix": true
     },
     "matrix_pins": {
