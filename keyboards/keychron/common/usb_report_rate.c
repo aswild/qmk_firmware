@@ -42,19 +42,23 @@ enum {
 static uint8_t report_rate_div   = 0;
 static uint8_t report_rate_combo = 0;
 
+#ifndef USB_REPORT_RATE_DIV_DEFAULT
+#define USB_REPORT_RATE_DIV_DEFAULT 3
+#endif
+
 void report_rate_update_interval(void) {
     extern void update_usb_report_interval(USBDriver * usbp, uint8_t interval);
     update_usb_report_interval(&USB_DRIVER, (0x01U << report_rate_div) - 1);
 }
 
 void report_rate_reset(void) {
-    report_rate_div = 3;
+    report_rate_div = USB_REPORT_RATE_DIV_DEFAULT;
     eeprom_update_byte((uint8_t *)(EECONFIG_BASE_HSUSB_REPORT_RATE), report_rate_div);
     report_rate_update_interval();
 }
 
 void report_rate_init(void) {
-    report_rate_div = 3;
+    report_rate_div = USB_REPORT_RATE_DIV_DEFAULT;
 
     if (!eeconfig_is_enabled()) {
         eeconfig_init();
