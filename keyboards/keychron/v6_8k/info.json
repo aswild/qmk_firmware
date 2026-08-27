@@ -29,7 +29,7 @@
     "build": {
         "debounce_type": "custom"
     },
-    "debounce": 30,
+    "debounce": 50,
     "eeprom": {
         "wear_leveling": {
             "driver": "embedded_flash",
