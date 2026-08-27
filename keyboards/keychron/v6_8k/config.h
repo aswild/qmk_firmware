@@ -36,3 +36,6 @@
 /* Factory test keys */
 #define FN_KEY_1 MO(1)
 #define FN_KEY_2 MO(3)
+
+/* 250Hz instead of default 1kHz */
+#define USB_REPORT_RATE_DIV_DEFAULT 5
