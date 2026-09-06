@@ -128,7 +128,6 @@ void eeconfig_init_custom_rgb(void) {
     eeprom_read_block(&os_ind_cfg, OFFSET_OS_INDICATOR, sizeof(os_ind_cfg));
     eeprom_read_block(&retail_demo_enable, (uint8_t *)(OFFSET_RETAIL_DEMO), sizeof(retail_demo_enable));
 
-    if (os_ind_cfg.hsv.v < 128) os_ind_cfg.hsv.v = 128;
     // Load per key rgb led
     eeprom_read_block(&per_key_rgb_type, OFFSET_PER_KEY_RGB_TYPE, sizeof(per_key_rgb_type));
     eeprom_read_block(per_key_led, OFFSET_PER_KEY_RGBS, sizeof(per_key_led));
@@ -335,7 +334,6 @@ static bool set_indicators_config(uint8_t *data) {
     os_ind_cfg.hsv.s       = data[2];
     os_ind_cfg.hsv.v       = data[3];
 
-    if (os_ind_cfg.hsv.v < 128) os_ind_cfg.hsv.v = 128;
     led_update_kb(host_keyboard_led_state());
 
     return true;
