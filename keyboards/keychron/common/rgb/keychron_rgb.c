@@ -339,6 +339,20 @@ static bool set_indicators_config(uint8_t *data) {
     return true;
 }
 
+void kc_rgb_update_indicators(void) {
+    eeprom_update_block(&os_ind_cfg, OFFSET_OS_INDICATOR, sizeof(os_ind_cfg));
+    led_update_kb(host_keyboard_led_state());
+}
+
+void kc_rgb_reset_indicators(void) {
+    os_ind_cfg.disable.raw = 0;
+    os_ind_cfg.hsv.h = RGB_INDICATOR_DEFAULT_HUE;
+    os_ind_cfg.hsv.s = RGB_INDICATOR_DEFAULT_SAT;
+    os_ind_cfg.hsv.v = RGB_INDICATOR_DEFAULT_VAL;
+
+    eeprom_update_block(&os_ind_cfg, OFFSET_OS_INDICATOR, sizeof(os_ind_cfg));
+}
+
 void kc_rgb_matrix_rx(bool usb, uint8_t *data, uint8_t length) {
     uint8_t cmd     = data[1];
     bool    success = true;

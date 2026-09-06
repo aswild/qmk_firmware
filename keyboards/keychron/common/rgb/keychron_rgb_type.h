@@ -57,3 +57,7 @@ typedef struct PACKED {
     os_led_t disable;
     HSV  hsv;
 } os_indicator_config_t;
+
+extern os_indicator_config_t os_ind_cfg;
+void kc_rgb_update_indicators(void);
+void kc_rgb_reset_indicators(void);
