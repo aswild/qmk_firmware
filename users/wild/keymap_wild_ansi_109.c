@@ -3,6 +3,8 @@
  * This file isn't compiled directly, but instead should be #included from
  * a keyboards/.../keymaps/wild/keymap.c file.
  *
+ * Copyright 2026 Allen Wild <allenwild93@gmail.com>
+ *
  * Copyright 2024 ~ 2026 @ Keychron (https://www.keychron.com)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,6 +25,8 @@
 #include "bootloader.h"
 #include "bootmagic.h"
 #include "keychron_common.h"
+#include "keychron_rgb_type.h"
+#include "rgb_matrix.h"
 
 #if !(defined(LK_WIRELESS_ENABLE) || defined(KC_BLUETOOTH_ENABLE))
 #define BT_HST1 KC_TRANSPARENT
@@ -37,6 +41,8 @@ enum wild_keycodes {
     W_ENCFN,
     W_ENCDN,
     W_ENCUP,
+    W_ENCDNFN,
+    W_ENCUPFN,
 };
 
 enum layers {
@@ -73,6 +79,43 @@ static uint8_t get_mods_flat(void) {
         m |= M_WIN;
     }
     return m;
+}
+
+static uint8_t u8_sat_add(uint8_t a, int b) {
+    int x = (int)a + b;
+    if (x < 0)
+        return 0;
+    if (x > UINT8_MAX)
+        return UINT8_MAX;
+    return x;
+}
+
+// Fn+Knob changes indicator (numlock/capslock) color
+// Ctrl: hue
+// Alt: saturation
+// Shift: brightness
+//
+// dir is -1 (decrease) or 1 (increase)
+static void indicator_knob(int dir) {
+    switch (get_mods_flat())
+    {
+        case M_CTRL:
+            os_ind_cfg.hsv.h += RGB_MATRIX_HUE_STEP * dir; // wraps around
+            break;
+
+        case M_ALT:
+            os_ind_cfg.hsv.s = u8_sat_add(os_ind_cfg.hsv.s, RGB_MATRIX_SAT_STEP * dir);
+            break;
+
+        case M_SHIFT:
+            os_ind_cfg.hsv.v = u8_sat_add(os_ind_cfg.hsv.v, RGB_MATRIX_VAL_STEP * dir);
+            break;
+
+        default:
+            return;
+    }
+
+    kc_rgb_update_indicators();
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -139,6 +182,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         break;
                     case M_CTRL | M_ALT | M_SHIFT:
                         eeconfig_update_rgb_matrix_default();
+                        kc_rgb_reset_indicators();
                         break;
                 }
                 return false;
@@ -200,6 +244,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 }
                 return false;
             }
+
+            case W_ENCDNFN:
+                indicator_knob(-1);
+                return false;
+
+            case W_ENCUPFN:
+                indicator_knob(1);
+                return false;
         }
     }
     return true;
@@ -246,6 +298,6 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [MAC_BASE] = {ENCODER_CCW_CW(KC_VOLD, KC_VOLU)},
     [MAC_FN]   = {ENCODER_CCW_CW(UG_VALD, UG_VALU)},
     [WIN_BASE] = {ENCODER_CCW_CW(W_ENCDN, W_ENCUP)},
-    [WIN_FN]   = {ENCODER_CCW_CW(UG_VALD, UG_VALU)},
+    [WIN_FN]   = {ENCODER_CCW_CW(W_ENCDNFN, W_ENCUPFN)},
 };
 #endif // ENCODER_MAP_ENABLE
